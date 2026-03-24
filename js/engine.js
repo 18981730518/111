@@ -14,7 +14,7 @@ let currentCamAnim = null;
 export function initEngine() {
     scene = new THREE.Scene();
     camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.01, 1000);
-    camera.position.set(0, 0, 2.0); 
+    camera.position.set(0, 0, 2.0); // 开局拉近
 
     renderer = new THREE.WebGLRenderer({ antialias: false, alpha: true, powerPreference: "high-performance", preserveDrawingBuffer: true });
     renderer.setPixelRatio(SysState.pixelRatio);
@@ -73,10 +73,6 @@ export function createPoints(geometry, isDefault = false) {
         let uName = 'u' + key.charAt(0).toUpperCase() + key.slice(1);
         generatedUniforms[uName] = { value: AppState[key] };
     }
-    
-    // 【新增音频相关 Uniform】
-    generatedUniforms['uAudioBass'] = { value: 0.0 };
-    generatedUniforms['uAudioIntensity'] = { value: AppState.audioIntensity };
 
     material = new THREE.ShaderMaterial({
         uniforms: generatedUniforms,
@@ -193,11 +189,13 @@ export function playCameraMove(index) {
             break;
     }
     currentCamAnim = tl;
+    // 立即应用初始倍速
     if(currentCamAnim) currentCamAnim.timeScale(AppState.camSpeed);
 }
 
 export function updateEngineCore() {
     if (controls) controls.update(); 
+    // 实时监听运镜倍速变化
     if (currentCamAnim) currentCamAnim.timeScale(AppState.camSpeed);
 
     if (material) {
@@ -206,9 +204,6 @@ export function updateEngineCore() {
             if(material.uniforms[uName]) { material.uniforms[uName].value = AppState[key]; }
         }
         material.uniforms.uTime.value = SysState.simulationTime;
-        
-        // 【注入平滑后的音频频段数据】
-        material.uniforms.uAudioBass.value = SysState.audioData.bass;
     }
     renderer.toneMappingExposure = AppState.exposure;
     if (afterimagePass) afterimagePass.uniforms['damp'].value = AppState.damp;
