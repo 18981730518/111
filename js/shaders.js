@@ -68,7 +68,7 @@ const EffectChunk = `
     } else if(uMode == 5) {
         currentThreshold = mix(uScanMax, uScanMin, uProgress); edgeValue = scanAxisPos + noiseMask * uNoiseEdge;
         flowVector = vec3(0.0, 2.0, 0.0) + curlNoise(noiseCoords * 0.5) * 1.5;
-    } else if(uMode == 6) { // 纯正的平面撕裂 (已找回)
+    } else if(uMode == 6) { // 纯正的平面撕裂
         currentThreshold = mix(uScanMin, uScanMax, uProgress); edgeValue = scanAxisPos + noiseMask * uNoiseEdge;
         float glitch = step(0.9, fract(noiseCoords.y * 10.0));
         flowVector = vec3(glitch * 5.0, 0.0, 0.0) + curlNoise(noiseCoords) * 0.2;
@@ -238,10 +238,6 @@ export const vertexShader = `
     uniform float uNoiseEdge; uniform float uPersistence;
     uniform float uBrightness; uniform float uContrast; uniform float uSaturation;
     
-    // 【新增音频引脚】
-    uniform float uAudioBass; 
-    uniform float uAudioIntensity;
-    
     ${NoiseChunk}
 
     void main() {
@@ -267,27 +263,10 @@ export const vertexShader = `
             } else { vAlpha = mix(1.0, 0.3, rawFactor); }
         } else { vAlpha = 1.0; }
 
-        // ----------------------------------------------------
-        // 🎧 【音频能量爆破核心 (Audio-Reactive Burst)】
-        // ----------------------------------------------------
-        // 1. 获取平滑插值后的音频张力
-        float burstPower = uAudioBass * uAudioIntensity; 
-        
-        // 2. 根据模型向外扩展的引力场进行绝对排斥
-        vec3 burstDir = normalize(position + 0.0001);
-        pos += burstDir * burstPower * (distToCenter * 0.5 + 2.0); 
-
-        // 3. 光学过载 (波风水门式的耀眼闪光：能量越大越接近明黄/白)
-        vec3 flashColor = vec3(1.0, 0.9, 0.4); 
-        vColor += mix(vec3(0.0), flashColor, burstPower * 1.5);
-        // ----------------------------------------------------
-
         vec4 mvPosition = modelViewMatrix * vec4(pos, 1.0);
         gl_Position = projectionMatrix * mvPosition;
         float dynamicSize = mix(uPointSize, uPointSize * 3.5, rawFactor);
-        
-        // 声音越大，点云尺寸也会轻微膨胀
-        gl_PointSize = (dynamicSize * (1.0 + burstPower * 0.5) * (2.0 / -mvPosition.z)) * uPixelRatio;
+        gl_PointSize = (dynamicSize * (2.0 / -mvPosition.z)) * uPixelRatio;
     }
 `;
 
