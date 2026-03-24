@@ -1,6 +1,6 @@
 export const AppState = {
     mode: 0, 
-    progress: 1.0, 
+    progress: 1.0, // 改为 1.0，开局模型完整显现
     animSpeed: 5.0, 
     speedCurve: 1.5,
     
@@ -24,20 +24,15 @@ export const AppState = {
     pointSize: 0.50,  
     bloomStrength: 1.25, 
     exposure: 1.00,   
-    damp: 0.80, 
+    damp: 0.80, // 锁定为极小值 0.80，且从 UI 移除
     
     brightness: 1.0, 
     contrast: 1.0, 
-    saturation: 1.0,
-
-    // 音频脉冲强度滑块默认值
-    audioIntensity: 1.5 
+    saturation: 1.0
 };
 
 export const SysState = {
     isAutoAnimating: false,
     simulationTime: 0,
-    pixelRatio: Math.min(window.devicePixelRatio, 2),
-    // 存储平滑后的音频数据
-    audioData: { bass: 0.0 }
+    pixelRatio: Math.min(window.devicePixelRatio, 2)
 };
