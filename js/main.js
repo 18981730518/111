@@ -42,6 +42,7 @@ function initUI() {
         if(e.key.toLowerCase() === 'h') document.getElementById('ui-container').classList.toggle('hidden-ui'); 
     });
 
+    // 依然保留手动上传功能，供玩家自己玩
     document.getElementById('ply-upload').addEventListener('change', (e) => {
         const file = e.target.files[0]; if (!file) return;
         const overlay = document.getElementById('loader-overlay'); 
@@ -135,65 +136,39 @@ function playEvolveAnimation() {
 }
 
 // -----------------------------------------------------
-// 🎧 【声学采集与平滑算法模块】
+// 🚀 核心新增：自动加载云端的 UFO 模型
 // -----------------------------------------------------
-const audioEl = document.getElementById('audio-player');
-const audioStatus = document.getElementById('audio-status');
-let audioCtx, analyser, dataArray;
-let isAudioInit = false;
-
-function initAudio() {
-    if(isAudioInit) return;
-    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    analyser = audioCtx.createAnalyser();
-    // FFT 窗口大小，控制频段的细腻度
-    analyser.fftSize = 256; 
-    const source = audioCtx.createMediaElementSource(audioEl);
-    source.connect(analyser);
-    analyser.connect(audioCtx.destination);
-    dataArray = new Uint8Array(analyser.frequencyBinCount);
-    isAudioInit = true;
+function loadDefaultUFO() {
+    const overlay = document.getElementById('loader-overlay'); 
+    overlay.classList.add('active');
+    
+    const loader = new PLYLoader();
+    // 直接读取同级目录下的 UFO.ply
+    loader.load('./UFO.ply', function (geometry) {
+        createPoints(geometry, false);
+        
+        // 保证模型加载出来是完整状态 (Progress = 1.0)
+        AppState.progress = 1.0; 
+        document.querySelectorAll('input[data-key="progress"]').forEach(el => el.value = 1);
+        document.querySelectorAll('.progress-val-text').forEach(el => el.innerText = "1.000");
+        document.querySelectorAll('.cam-btn').forEach(b => b.classList.remove('active-cam'));
+        
+        overlay.classList.remove('active');
+    }, undefined, function (error) {
+        console.error('UFO.ply 加载失败，请检查仓库中是否存在该文件:', error);
+        overlay.classList.remove('active');
+    });
 }
 
-// 监听 MP3 上传
-document.getElementById('mp3-upload').addEventListener('change', (e) => {
-    const file = e.target.files[0];
-    if(!file) return;
-    
-    initAudio();
-    if(audioCtx.state === 'suspended') audioCtx.resume();
-    
-    audioEl.src = URL.createObjectURL(file);
-    audioEl.play();
-    audioStatus.innerText = "音轨解析中...";
-    audioStatus.classList.replace('text-white/40', 'text-green-400');
-});
-
-// 初始化渲染器与 UI
 initEngine(); 
 initUI(); 
+loadDefaultUFO(); // 启动时立刻执行加载
 animate();
 
-// 核心渲染循环
 function animate() {
     requestAnimationFrame(animate);
     const dt = clock.getDelta(); 
     SysState.simulationTime += dt;
-    
-    // 【音频数据物理平滑处理 (防抽风神经质)】
-    if(isAudioInit && !audioEl.paused) {
-        analyser.getByteFrequencyData(dataArray);
-        // 抓取极低频 (Bass/Kick)，前几个数组元素代表低音
-        let rawBass = (dataArray[2] + dataArray[3] + dataArray[4]) / (3.0 * 255.0); 
-        
-        // 核心算法：波风水门式的插值平滑
-        // 0.2 的阻尼系数保证了瞬间爆发力和收招的干脆感
-        SysState.audioData.bass += (rawBass - SysState.audioData.bass) * 0.2; 
-    } else {
-        // 没音乐时，优雅地回归平息
-        SysState.audioData.bass += (0 - SysState.audioData.bass) * 0.1;
-    }
-
     updateEngineCore(); 
     composer.render();
 }
